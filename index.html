@@ -4,85 +4,129 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>موقع دردشة ذكي</title>
-    <!-- استدعاء Tailwind CSS للتصميم -->
+    <!-- استدعاء Tailwind CSS -->
     <script src="https://cdn.tailwindcss.com"></script>
     <!-- أيقونات Lucide -->
     <script src="https://unpkg.com/lucide@latest"></script>
+    <!-- خط تجوال العربي -->
+    <link href="https://fonts.googleapis.com/css2?family=Tajawal:wght@300;400;500;700&display=swap" rel="stylesheet">
+    
     <style>
-        /* تخصيص شريط التمرير */
-        ::-webkit-scrollbar { width: 8px; }
-        ::-webkit-scrollbar-track { background: #1e293b; }
-        ::-webkit-scrollbar-thumb { background: #475569; border-radius: 4px; }
-        ::-webkit-scrollbar-thumb:hover { background: #64748b; }
+        body { font-family: 'Tajawal', sans-serif; }
         
-        .message-animation { animation: fadeIn 0.3s ease-out; }
-        @keyframes fadeIn { from { opacity: 0; transform: translateY(10px); } to { opacity: 1; transform: translateY(0); } }
+        /* تخصيص شريط التمرير */
+        ::-webkit-scrollbar { width: 6px; }
+        ::-webkit-scrollbar-track { background: transparent; }
+        ::-webkit-scrollbar-thumb { background: rgba(255,255,255,0.2); border-radius: 10px; }
+        ::-webkit-scrollbar-thumb:hover { background: rgba(255,255,255,0.4); }
+        
+        /* تأثير الزجاج */
+        .glass-panel {
+            background: rgba(17, 25, 40, 0.65);
+            backdrop-filter: blur(16px);
+            -webkit-backdrop-filter: blur(16px);
+            border-bottom: 1px solid rgba(255, 255, 255, 0.08);
+        }
+        
+        .glass-input {
+            background: rgba(0, 0, 0, 0.4);
+            backdrop-filter: blur(10px);
+            border: 1px solid rgba(255, 255, 255, 0.1);
+        }
+
+        .bot-bubble {
+            background: rgba(255, 255, 255, 0.08);
+            border: 1px solid rgba(255, 255, 255, 0.05);
+            backdrop-filter: blur(4px);
+        }
+
+        .user-bubble {
+            background: linear-gradient(135deg, #6366f1 0%, #a855f7 100%);
+            box-shadow: 0 4px 15px rgba(168, 85, 247, 0.3);
+        }
+
+        .message-animation { animation: slideUp 0.4s cubic-bezier(0.2, 0.8, 0.2, 1); }
+        @keyframes slideUp { from { opacity: 0; transform: translateY(20px) scale(0.95); } to { opacity: 1; transform: translateY(0) scale(1); } }
     </style>
 </head>
-<body class="bg-slate-900 text-slate-100 font-sans flex flex-col h-screen overflow-hidden">
+<body class="bg-[conic-gradient(at_top_right,_var(--tw-gradient-stops))] from-slate-900 via-purple-900 to-slate-900 text-white flex flex-col h-screen overflow-hidden selection:bg-purple-500 selection:text-white">
 
     <!-- الرأس (Header) -->
-    <header class="flex items-center justify-between px-6 py-4 bg-slate-800 border-b border-slate-700 shadow-md shrink-0">
-        <div class="flex items-center gap-3">
-            <div class="p-2 bg-indigo-600 rounded-lg shadow-lg shadow-indigo-500/20">
-                <i data-lucide="bot" class="w-6 h-6 text-white"></i>
+    <header class="glass-panel flex items-center justify-between px-6 py-4 z-20 shadow-2xl shadow-black/20">
+        <div class="flex items-center gap-4">
+            <div class="relative group">
+                <div class="absolute -inset-0.5 bg-gradient-to-r from-pink-600 to-purple-600 rounded-xl blur opacity-60 group-hover:opacity-100 transition duration-200"></div>
+                <div class="relative p-2.5 bg-slate-900 rounded-xl flex items-center justify-center">
+                    <i data-lucide="sparkles" class="w-6 h-6 text-purple-400"></i>
+                </div>
             </div>
             <div>
-                <h1 class="text-xl font-bold text-white tracking-wide">الدردشة الذكية</h1>
-                <p class="text-xs text-slate-400 flex items-center gap-1">
-                    <span class="w-2 h-2 rounded-full bg-green-500 animate-pulse"></span>
-                    متصل بـ <span id="currentEndpointDisplay" class="font-mono text-indigo-300">chat.php</span>
+                <h1 class="text-xl font-bold bg-clip-text text-transparent bg-gradient-to-r from-white to-slate-400">المساعد الذكي</h1>
+                <p class="text-[11px] text-slate-400 flex items-center gap-1.5 font-medium tracking-wide">
+                    <span class="relative flex h-2 w-2">
+                      <span class="animate-ping absolute inline-flex h-full w-full rounded-full bg-emerald-400 opacity-75"></span>
+                      <span class="relative inline-flex rounded-full h-2 w-2 bg-emerald-500"></span>
+                    </span>
+                    متصل بـ <span id="currentEndpointDisplay" class="text-purple-300 font-mono">chat.php</span>
                 </p>
             </div>
         </div>
         
-        <div class="flex gap-2">
-            <button onclick="clearChat()" class="p-2 text-slate-400 hover:text-red-400 hover:bg-slate-700 rounded-lg transition-colors" title="مسح المحادثة">
+        <div class="flex gap-3">
+            <button onclick="clearChat()" class="p-2.5 text-slate-400 hover:text-white hover:bg-white/10 rounded-xl transition-all duration-300 border border-transparent hover:border-white/10" title="مسح المحادثة">
                 <i data-lucide="trash-2" class="w-5 h-5"></i>
             </button>
-            <button onclick="toggleSettings()" class="p-2 text-slate-400 hover:text-blue-400 hover:bg-slate-700 rounded-lg transition-colors" title="الإعدادات">
-                <i data-lucide="settings" class="w-6 h-6"></i>
+            <button onclick="toggleSettings()" class="p-2.5 text-slate-400 hover:text-white hover:bg-white/10 rounded-xl transition-all duration-300 border border-transparent hover:border-white/10" title="الإعدادات">
+                <i data-lucide="settings-2" class="w-5 h-5"></i>
             </button>
         </div>
     </header>
 
+    <!-- خلفية جمالية متحركة -->
+    <div class="fixed inset-0 -z-10 pointer-events-none opacity-40">
+        <div class="absolute top-0 left-1/4 w-96 h-96 bg-purple-600/30 rounded-full blur-3xl mix-blend-screen animate-pulse"></div>
+        <div class="absolute bottom-0 right-1/4 w-96 h-96 bg-blue-600/20 rounded-full blur-3xl mix-blend-screen animate-pulse" style="animation-delay: 2s"></div>
+    </div>
+
     <!-- منطقة المحادثة (Chat Area) -->
-    <main id="chatBox" class="flex-1 overflow-y-auto p-4 space-y-6 scroll-smooth">
+    <main id="chatBox" class="flex-1 overflow-y-auto p-4 md:p-6 space-y-8 scroll-smooth pb-32">
         <!-- رسالة ترحيب -->
-        <div class="flex items-start gap-4 flex-row message-animation">
-            <div class="w-10 h-10 rounded-full bg-slate-700 flex items-center justify-center shrink-0 border border-slate-600">
-                <i data-lucide="bot" class="w-6 h-6 text-slate-300"></i>
+        <div class="flex items-start gap-4 flex-row message-animation max-w-3xl">
+            <div class="w-10 h-10 rounded-2xl bg-gradient-to-br from-slate-800 to-slate-900 flex items-center justify-center shrink-0 border border-slate-700 shadow-lg">
+                <i data-lucide="bot" class="w-5 h-5 text-purple-400"></i>
             </div>
-            <div class="bg-slate-800 text-slate-200 border border-slate-700 px-5 py-3 rounded-2xl rounded-tr-none shadow-sm max-w-[85%]">
-                <p>مرحباً بك! أنا جاهز للتواصل مع ملف <code>chat.php</code>. اكتب رسالتك بالأسفل.</p>
+            <div class="bot-bubble text-slate-200 px-6 py-4 rounded-3xl rounded-tr-sm shadow-md">
+                <p class="leading-7 font-light">مرحباً بك! 👋 <br>أنا واجهتك الجديدة للتواصل مع الذكاء الاصطناعي. التصميم الآن أكثر حيوية وجمالاً.</p>
             </div>
         </div>
     </main>
 
-    <!-- مؤشر التحميل (مخفي افتراضياً) -->
-    <div id="loadingIndicator" class="hidden px-4 py-2">
-        <div class="flex items-center gap-2 max-w-4xl mx-auto">
-            <div class="w-10 h-10 rounded-full bg-slate-800 flex items-center justify-center">
-                <i data-lucide="loader-2" class="w-5 h-5 animate-spin text-indigo-500"></i>
+    <!-- مؤشر التحميل -->
+    <div id="loadingIndicator" class="hidden absolute bottom-24 left-1/2 -translate-x-1/2 z-10">
+        <div class="glass-input px-4 py-2 rounded-full flex items-center gap-3 shadow-xl">
+            <div class="flex gap-1">
+                <span class="w-1.5 h-1.5 bg-purple-500 rounded-full animate-bounce"></span>
+                <span class="w-1.5 h-1.5 bg-purple-500 rounded-full animate-bounce" style="animation-delay: 0.1s"></span>
+                <span class="w-1.5 h-1.5 bg-purple-500 rounded-full animate-bounce" style="animation-delay: 0.2s"></span>
             </div>
-            <span class="text-slate-500 text-sm">جاري المعالجة...</span>
+            <span class="text-xs text-purple-200 font-medium">جاري الكتابة...</span>
         </div>
     </div>
 
     <!-- منطقة الإدخال (Input Area) -->
-    <footer class="p-4 bg-slate-800 border-t border-slate-700 shrink-0">
+    <footer class="absolute bottom-0 w-full p-4 md:p-6 shrink-0 z-20">
         <div class="max-w-4xl mx-auto space-y-3">
             
-            <!-- منطقة معاينة المرفقات -->
-            <div id="attachmentsPreview" class="flex gap-2 overflow-x-auto pb-1 hidden">
-                <!-- سيتم إضافة الصور هنا بواسطة JS -->
+            <!-- معاينة المرفقات -->
+            <div id="attachmentsPreview" class="flex gap-3 overflow-x-auto pb-2 hidden px-1">
+                <!-- المرفقات ستظهر هنا -->
             </div>
 
-            <div class="relative flex items-end gap-2 bg-slate-900/50 p-2 rounded-2xl border border-slate-700 focus-within:border-indigo-500/50 transition-all shadow-inner">
+            <div class="glass-input p-1.5 rounded-[24px] flex items-end gap-2 shadow-2xl shadow-black/40 transition-all focus-within:ring-1 focus-within:ring-purple-500/50">
                 
                 <!-- زر المرفقات -->
                 <input type="file" id="fileInput" class="hidden" multiple onchange="handleFileSelect(event)">
-                <button onclick="document.getElementById('fileInput').click()" class="p-3 text-slate-400 hover:text-white hover:bg-slate-700 rounded-xl transition-colors shrink-0">
+                <button onclick="document.getElementById('fileInput').click()" class="p-3.5 text-slate-400 hover:text-white hover:bg-white/10 rounded-full transition-colors shrink-0">
                     <i data-lucide="paperclip" class="w-5 h-5"></i>
                 </button>
 
@@ -90,7 +134,7 @@
                 <textarea
                     id="userMessage"
                     placeholder="اكتب رسالتك هنا..."
-                    class="w-full bg-transparent text-white placeholder-slate-500 px-2 py-3 focus:outline-none resize-none max-h-32 min-h-[44px]"
+                    class="w-full bg-transparent text-white placeholder-slate-400/70 px-2 py-3.5 focus:outline-none resize-none max-h-32 min-h-[50px] text-[15px]"
                     rows="1"
                     onkeydown="if(event.key === 'Enter' && !event.shiftKey){ event.preventDefault(); sendMessage(); }"
                 ></textarea>
@@ -98,47 +142,53 @@
                 <!-- زر الإرسال -->
                 <button
                     onclick="sendMessage()"
-                    class="p-3 bg-indigo-600 hover:bg-indigo-500 rounded-xl transition-all text-white shadow-lg shrink-0"
+                    class="p-3.5 bg-gradient-to-r from-purple-600 to-indigo-600 hover:from-purple-500 hover:to-indigo-500 rounded-[20px] transition-all text-white shadow-lg shadow-purple-900/40 shrink-0 group"
                 >
-                    <i data-lucide="send" class="w-5 h-5"></i>
+                    <i data-lucide="send" class="w-5 h-5 group-hover:-translate-x-0.5 group-hover:-translate-y-0.5 transition-transform"></i>
                 </button>
             </div>
+            
+            <p class="text-center text-[10px] text-slate-500 font-light tracking-widest opacity-60">AI CHAT INTERFACE v2.0</p>
         </div>
     </footer>
 
     <!-- نافذة الإعدادات (Modal) -->
-    <div id="settingsModal" class="fixed inset-0 bg-black/70 backdrop-blur-sm hidden items-center justify-center z-50 p-4">
-        <div class="bg-slate-800 w-full max-w-md rounded-2xl border border-slate-700 shadow-2xl p-6 transform transition-all scale-100">
-            <div class="flex justify-between items-center mb-6 border-b border-slate-700 pb-4">
-                <h2 class="text-lg font-bold flex items-center gap-2 text-white">
-                    <i data-lucide="settings" class="w-5 h-5 text-indigo-400"></i>
+    <div id="settingsModal" class="fixed inset-0 bg-black/80 backdrop-blur-md hidden items-center justify-center z-50 p-4 opacity-0 transition-opacity duration-300">
+        <div class="glass-strong bg-[#1a1f2e] w-full max-w-md rounded-3xl border border-slate-700/50 shadow-2xl p-0 overflow-hidden transform scale-95 transition-transform duration-300">
+            <div class="p-6 border-b border-slate-700/50 flex justify-between items-center bg-slate-900/30">
+                <h2 class="text-lg font-bold flex items-center gap-3 text-white">
+                    <div class="p-2 bg-purple-500/20 rounded-lg text-purple-400"><i data-lucide="sliders" class="w-5 h-5"></i></div>
                     إعدادات الاتصال
                 </h2>
-                <button onclick="toggleSettings()" class="text-slate-400 hover:text-white">
+                <button onclick="toggleSettings()" class="text-slate-500 hover:text-white transition-colors">
                     <i data-lucide="x" class="w-6 h-6"></i>
                 </button>
             </div>
             
-            <div class="space-y-4">
+            <div class="p-6 space-y-6">
                 <div>
-                    <label class="block text-sm font-medium text-slate-300 mb-2">رابط ملف PHP (Endpoint)</label>
-                    <input 
-                        type="text" 
-                        id="apiEndpoint" 
-                        value="chat.php"
-                        class="w-full bg-slate-900 border border-slate-600 rounded-xl px-4 py-3 text-sm focus:border-indigo-500 focus:outline-none text-slate-200 dir-ltr font-mono shadow-inner"
-                        dir="ltr"
-                    />
-                    <p class="text-xs text-slate-500 mt-2">
-                        اكتب الرابط كاملاً، مثال: <code class="bg-slate-900 px-1 rounded text-indigo-300">http://localhost/chat.php</code>
+                    <label class="block text-xs font-bold text-slate-400 uppercase tracking-wider mb-2.5">رابط API (PHP Endpoint)</label>
+                    <div class="relative">
+                        <input 
+                            type="text" 
+                            id="apiEndpoint" 
+                            value="chat.php"
+                            class="w-full bg-black/40 border border-slate-700 rounded-xl pl-4 pr-10 py-3.5 text-sm focus:border-purple-500 focus:ring-1 focus:ring-purple-500 focus:outline-none text-slate-200 dir-ltr font-mono transition-all"
+                            dir="ltr"
+                        />
+                        <i data-lucide="link" class="w-4 h-4 text-slate-500 absolute right-3 top-4"></i>
+                    </div>
+                    <p class="text-[11px] text-slate-500 mt-2.5 flex items-center gap-1.5">
+                        <i data-lucide="info" class="w-3 h-3"></i>
+                        مثال: <code class="text-purple-400">http://localhost/chat.php</code>
                     </p>
                 </div>
             </div>
 
-            <div class="mt-8 flex justify-end">
-                <button onclick="saveSettings()" class="bg-indigo-600 hover:bg-indigo-500 text-white px-6 py-2.5 rounded-xl font-medium transition-colors shadow-lg shadow-indigo-900/20 flex items-center gap-2">
-                    <i data-lucide="save" class="w-4 h-4"></i>
-                    حفظ وإغلاق
+            <div class="p-6 pt-2 flex justify-end">
+                <button onclick="saveSettings()" class="w-full bg-white text-slate-900 hover:bg-slate-200 font-bold py-3.5 rounded-xl transition-colors flex items-center justify-center gap-2">
+                    <i data-lucide="check" class="w-4 h-4"></i>
+                    حفظ التغييرات
                 </button>
             </div>
         </div>
@@ -146,114 +196,122 @@
 
     <!-- JavaScript Logic -->
     <script>
-        // تفعيل الأيقونات
         lucide.createIcons();
 
-        // متغيرات عامة
         let endpointURL = "chat.php";
         const chatBox = document.getElementById("chatBox");
         const userMessageInput = document.getElementById("userMessage");
         const loadingIndicator = document.getElementById("loadingIndicator");
+        const modal = document.getElementById('settingsModal');
 
-        // --- الدالة الأساسية للإرسال (كما طلبت مع تحسينات) ---
         async function sendMessage() {
             const text = userMessageInput.value.trim();
-            
-            // التحقق من وجود نص
             if (!text) return;
 
-            // 1. عرض رسالة المستخدم في الواجهة
             appendMessage('user', text);
-            userMessageInput.value = ""; // مسح الحقل
-            loadingIndicator.classList.remove('hidden'); // إظهار التحميل
+            userMessageInput.value = "";
+            loadingIndicator.classList.remove('hidden');
             
-            // التمرير للأسفل
-            chatBox.scrollTop = chatBox.scrollHeight;
+            scrollToBottom();
 
             try {
-                // 2. إرسال البيانات (fetch)
                 const response = await fetch(endpointURL, {
                     method: "POST",
-                    headers: { 
-                        "Content-Type": "application/json",
-                        "Accept": "application/json" 
-                    },
+                    headers: { "Content-Type": "application/json", "Accept": "application/json" },
                     body: JSON.stringify({ message: text })
                 });
 
-                // التحقق من أن السيرفر أرسل JSON ولم يرسل خطأ HTML
                 const contentType = response.headers.get("content-type");
                 if (!contentType || !contentType.includes("application/json")) {
                      const textResponse = await response.text();
-                     throw new Error("السيرفر أرجع استجابة غير صالحة (HTML). تأكد من مسار الملف في الإعدادات.\n" + textResponse.substring(0, 100));
+                     throw new Error("خطأ في السيرفر أو الرابط غير صحيح.");
                 }
 
-                // 3. استقبال الرد
                 const data = await response.json();
                 
-                // استخراج المحتوى (يدعم هيكلية OpenAI أو هيكلية بسيطة)
                 let reply = "لا يوجد رد.";
-                if (data.choices && data.choices[0] && data.choices[0].message) {
+                if (data.choices && data.choices[0]) {
                     reply = data.choices[0].message.content;
                 } else if (data.message) {
                     reply = data.message;
-                } else if (data.error) {
-                    reply = "خطأ من السيرفر: " + data.error;
                 } else {
                     reply = JSON.stringify(data);
                 }
 
-                // 4. عرض الرد
                 appendMessage('bot', reply);
 
             } catch (error) {
                 console.error("Error:", error);
-                appendMessage('error', "حدث خطأ في الاتصال: " + error.message);
+                appendMessage('error', "فشل الاتصال: " + error.message);
             } finally {
-                loadingIndicator.classList.add('hidden'); // إخفاء التحميل
-                chatBox.scrollTop = chatBox.scrollHeight;
+                loadingIndicator.classList.add('hidden');
+                scrollToBottom();
             }
         }
 
-        // --- دوال مساعدة للعرض ---
-
-        // دالة لإضافة "فقاعة" رسالة للدردشة
         function appendMessage(sender, text) {
             const div = document.createElement("div");
-            div.className = `flex items-start gap-4 message-animation ${sender === 'user' ? 'flex-row-reverse' : 'flex-row'}`;
+            div.className = `flex items-end gap-3 message-animation max-w-3xl ${sender === 'user' ? 'flex-row-reverse ml-auto' : 'flex-row'}`;
             
-            // تحديد الألوان والأيقونات حسب المرسل
-            let avatarBg = sender === 'user' ? 'bg-indigo-600' : sender === 'error' ? 'bg-red-600' : 'bg-slate-700';
-            let iconName = sender === 'user' ? 'user' : sender === 'error' ? 'alert-triangle' : 'bot';
-            let bubbleClass = sender === 'user' 
-                ? 'bg-indigo-600 text-white rounded-tl-none' 
-                : sender === 'error'
-                ? 'bg-red-900/50 text-red-200 border border-red-700 rounded-tr-none font-mono text-sm'
-                : 'bg-slate-800 text-slate-200 border border-slate-700 rounded-tr-none';
-
-            div.innerHTML = `
-                <div class="w-10 h-10 rounded-full ${avatarBg} flex items-center justify-center shrink-0 border border-white/10 shadow-md">
-                    <i data-lucide="${iconName}" class="w-5 h-5 text-white"></i>
-                </div>
-                <div class="${bubbleClass} px-5 py-3 rounded-2xl shadow-sm max-w-[85%] leading-relaxed">
-                    <p class="whitespace-pre-wrap break-words">${text}</p>
-                </div>
-            `;
+            let bubbleContent = '';
+            
+            if (sender === 'user') {
+                div.innerHTML = `
+                    <div class="w-8 h-8 rounded-full bg-purple-600 flex items-center justify-center shrink-0 shadow-lg border border-purple-400/30">
+                        <i data-lucide="user" class="w-4 h-4 text-white"></i>
+                    </div>
+                    <div class="user-bubble text-white px-5 py-3.5 rounded-3xl rounded-tl-sm shadow-lg max-w-[85%] text-[15px]">
+                        <p class="whitespace-pre-wrap leading-relaxed">${text}</p>
+                    </div>
+                `;
+            } else if (sender === 'error') {
+                 div.innerHTML = `
+                    <div class="w-8 h-8 rounded-full bg-red-500/20 flex items-center justify-center shrink-0 border border-red-500/50">
+                        <i data-lucide="alert-circle" class="w-4 h-4 text-red-400"></i>
+                    </div>
+                    <div class="bg-red-900/20 text-red-200 px-5 py-3 rounded-2xl border border-red-500/20 text-sm">
+                        <p>${text}</p>
+                    </div>
+                `;
+            } else {
+                div.innerHTML = `
+                    <div class="w-8 h-8 rounded-2xl bg-gradient-to-br from-slate-800 to-slate-900 flex items-center justify-center shrink-0 border border-slate-700 shadow">
+                        <i data-lucide="bot" class="w-4 h-4 text-purple-400"></i>
+                    </div>
+                    <div class="bot-bubble text-slate-100 px-6 py-4 rounded-3xl rounded-tr-sm shadow-md max-w-[85%] text-[15px]">
+                        <p class="whitespace-pre-wrap leading-relaxed">${text}</p>
+                    </div>
+                `;
+            }
             
             chatBox.appendChild(div);
-            lucide.createIcons(); // تحديث الأيقونات للعناصر الجديدة
+            lucide.createIcons();
         }
 
-        // إعدادات المودال
+        function scrollToBottom() {
+            chatBox.scrollTo({ top: chatBox.scrollHeight, behavior: 'smooth' });
+        }
+
         function toggleSettings() {
-            const modal = document.getElementById('settingsModal');
             if (modal.classList.contains('hidden')) {
                 modal.classList.remove('hidden');
                 modal.classList.add('flex');
-                document.getElementById('apiEndpoint').value = endpointURL; // جلب القيمة الحالية
+                // Animation In
+                setTimeout(() => {
+                    modal.classList.remove('opacity-0');
+                    modal.querySelector('div').classList.remove('scale-95');
+                    modal.querySelector('div').classList.add('scale-100');
+                }, 10);
+                document.getElementById('apiEndpoint').value = endpointURL;
             } else {
-                modal.classList.add('hidden');
-                modal.classList.remove('flex');
+                // Animation Out
+                modal.classList.add('opacity-0');
+                modal.querySelector('div').classList.remove('scale-100');
+                modal.querySelector('div').classList.add('scale-95');
+                setTimeout(() => {
+                    modal.classList.add('hidden');
+                    modal.classList.remove('flex');
+                }, 300);
             }
         }
 
@@ -261,39 +319,36 @@
             const newUrl = document.getElementById('apiEndpoint').value.trim();
             if (newUrl) {
                 endpointURL = newUrl;
-                document.getElementById('currentEndpointDisplay').innerText = newUrl.split('/').pop(); // عرض اسم الملف فقط
+                document.getElementById('currentEndpointDisplay').innerText = newUrl.split('/').pop();
             }
             toggleSettings();
         }
 
         function clearChat() {
-            chatBox.innerHTML = ''; // مسح المحتوى
-            appendMessage('system', 'تم مسح المحادثة. ابدأ من جديد!');
+            chatBox.innerHTML = '';
+            appendMessage('system', 'تم بدء محادثة جديدة.');
         }
 
-        // التعامل مع الملفات (معاينة فقط في هذا الإصدار)
         function handleFileSelect(event) {
             const files = event.target.files;
             const previewContainer = document.getElementById('attachmentsPreview');
             
-            if (files.length > 0) {
-                previewContainer.classList.remove('hidden');
-            }
+            if (files.length > 0) previewContainer.classList.remove('hidden');
 
             for (let i = 0; i < files.length; i++) {
                 const file = files[i];
                 const div = document.createElement('div');
-                div.className = 'bg-slate-800 border border-slate-600 rounded-lg p-2 min-w-[100px] flex flex-col items-center justify-center relative group';
+                div.className = 'glass-input rounded-xl p-2 min-w-[80px] flex flex-col items-center justify-center relative animate-pulse';
                 div.innerHTML = `
-                    <i data-lucide="file-text" class="w-6 h-6 text-slate-400 mb-1"></i>
-                    <span class="text-[10px] text-slate-300 truncate w-full text-center max-w-[80px]">${file.name}</span>
+                    <i data-lucide="file-image" class="w-5 h-5 text-purple-400 mb-1"></i>
+                    <span class="text-[9px] text-slate-300 truncate w-full text-center max-w-[60px]">${file.name}</span>
                 `;
                 previewContainer.appendChild(div);
             }
             lucide.createIcons();
         }
-
     </script>
 </body>
 </html>
+
 
