@@ -1,336 +1,299 @@
-import React, { useState, useRef, useEffect } from 'react';
-import { Send, Settings, Bot, User, X, Loader2, Save, Trash2, Paperclip, FileText, XCircle, Server } from 'lucide-react';
-
-export default function App() {
-  // --- الحالة (State) ---
-  const [messages, setMessages] = useState([
-    { 
-      id: 1, 
-      role: 'system', 
-      content: 'أهلاً بك. يمكنك الآن ربط هذا التطبيق بملف chat.php أو استخدام OpenAI مباشرة.' 
-    }
-  ]);
-  const [input, setInput] = useState('');
-  const [attachments, setAttachments] = useState([]); 
-  const [isLoading, setIsLoading] = useState(false);
-  const [isSettingsOpen, setIsSettingsOpen] = useState(false);
-  
-  // إعدادات الـ API
-  const [config, setConfig] = useState({
-    mode: 'openai', // 'openai' أو 'custom_php'
-    endpoint: 'chat.php', // الرابط الافتراضي كما طلبت
-    apiKey: '',
-    model: 'gpt-3.5-turbo',
-    systemPrompt: 'أنت مساعد ذكي.'
-  });
-
-  const messagesEndRef = useRef(null);
-  const fileInputRef = useRef(null);
-
-  // --- دوال المساعدة (التمرير ومعالجة الملفات) ---
-  const scrollToBottom = () => {
-    messagesEndRef.current?.scrollIntoView({ behavior: "smooth" });
-  };
-
-  useEffect(() => {
-    scrollToBottom();
-  }, [messages, attachments]);
-
-  // تحويل الصور للمعاينة فقط (في وضع PHP سنرسل النص فقط كما في كودك، أو نطور PHP لاحقاً)
-  const handleFileSelect = async (e) => {
-    if (e.target.files) {
-      const filesArray = Array.from(e.target.files);
-      // تبسيط: نعرض أسماء الملفات فقط للمعاينة
-      const newAttachments = filesArray.map(file => ({
-        type: file.type.startsWith('image/') ? 'image' : 'file',
-        name: file.name,
-        fileObject: file // نحتفظ بالملف الأصلي
-      }));
-      setAttachments(prev => [...prev, ...newAttachments]);
-    }
-    if (fileInputRef.current) fileInputRef.current.value = '';
-  };
-
-  const removeAttachment = (index) => {
-    setAttachments(prev => prev.filter((_, i) => i !== index));
-  };
-
-  // --- دالة الإرسال الرئيسية (معدلة لتدعم منطق الكود الخاص بك) ---
-  const handleSend = async () => {
-    if (!input.trim() && attachments.length === 0) return;
-
-    // 1. عرض رسالة المستخدم فوراً
-    const userMessage = { 
-      id: Date.now(), 
-      role: 'user', 
-      content: input,
-      attachments: [...attachments] // عرض صوري فقط
-    };
-
-    setMessages(prev => [...prev, userMessage]);
-    setInput('');
-    setAttachments([]);
-    setIsLoading(true);
-
-    try {
-      let response;
-      let data;
-
-      // ---------------------------------------------------------
-      // الحالة أ: استخدام الكود الذي طلبته (وضع PHP/Custom)
-      // ---------------------------------------------------------
-      if (config.mode === 'custom_php') {
-        // هذا هو تنفيذ الكود الذي أرسلته لك ولكن بصيغة React
-        // fetch("chat.php", { ... body: JSON.stringify({ message }) ... })
+<!DOCTYPE html>
+<html lang="ar" dir="rtl">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>موقع دردشة ذكي</title>
+    <!-- استدعاء Tailwind CSS للتصميم -->
+    <script src="https://cdn.tailwindcss.com"></script>
+    <!-- أيقونات Lucide -->
+    <script src="https://unpkg.com/lucide@latest"></script>
+    <style>
+        /* تخصيص شريط التمرير */
+        ::-webkit-scrollbar { width: 8px; }
+        ::-webkit-scrollbar-track { background: #1e293b; }
+        ::-webkit-scrollbar-thumb { background: #475569; border-radius: 4px; }
+        ::-webkit-scrollbar-thumb:hover { background: #64748b; }
         
-        response = await fetch(config.endpoint, {
-            method: "POST",
-            headers: { "Content-Type": "application/json" },
-            // نرسل الهيكل البسيط كما طلبت: { message: "..." }
-            body: JSON.stringify({ 
-              message: userMessage.content 
-            }) 
-        });
+        .message-animation { animation: fadeIn 0.3s ease-out; }
+        @keyframes fadeIn { from { opacity: 0; transform: translateY(10px); } to { opacity: 1; transform: translateY(0); } }
+    </style>
+</head>
+<body class="bg-slate-900 text-slate-100 font-sans flex flex-col h-screen overflow-hidden">
 
-      } 
-      // ---------------------------------------------------------
-      // الحالة ب: استخدام OpenAI القياسي (المتقدم)
-      // ---------------------------------------------------------
-      else {
-        // نحتاج المفتاح لهذا الوضع
-        if (!config.apiKey) throw new Error("يرجى إدخال مفتاح API في الإعدادات");
-
-        const apiMessages = [
-          { role: "system", content: config.systemPrompt },
-          ...messages.filter(m => m.role !== 'system').map(m => ({ role: m.role, content: m.content })),
-          { role: "user", content: userMessage.content }
-        ];
-
-        response = await fetch(config.endpoint, {
-          method: 'POST',
-          headers: {
-            'Content-Type': 'application/json',
-            'Authorization': `Bearer ${config.apiKey}`
-          },
-          body: JSON.stringify({
-            model: config.model,
-            messages: apiMessages
-          })
-        });
-      }
-
-      // معالجة الرد
-      data = await response.json();
-
-      if (!response.ok) {
-        throw new Error(data.error?.message || 'فشل الاتصال بالخادم');
-      }
-
-      // استخراج النص من الرد (نفترض أن chat.php يعيد نفس هيكلية OpenAI كما في كودك)
-      // data.choices[0].message.content
-      const replyContent = data.choices?.[0]?.message?.content || data.message || JSON.stringify(data);
-      
-      const botResponse = {
-        id: Date.now() + 1,
-        role: 'assistant',
-        content: replyContent
-      };
-
-      setMessages(prev => [...prev, botResponse]);
-
-    } catch (error) {
-      // محاكاة في حالة عدم وجود ملف chat.php فعلياً للتجربة
-      if (config.mode === 'custom_php' && error.message.includes('token')) { // SyntaxError usually implies 404 HTML response
-         const mockResponse = {
-            id: Date.now() + 1,
-            role: 'assistant',
-            content: "⚠️ تنبيه: لم يتم العثور على ملف `chat.php`. تأكد من أنك رفعت ملفات الموقع على سيرفر يدعم PHP. \n\n هذا رد تلقائي لأن الاتصال فشل."
-         };
-         setMessages(prev => [...prev, mockResponse]);
-      } else {
-        const errorMsg = {
-          id: Date.now() + 1,
-          role: 'system',
-          content: `خطأ: ${error.message}`
-        };
-        setMessages(prev => [...prev, errorMsg]);
-      }
-    } finally {
-      setIsLoading(false);
-    }
-  };
-
-  const handleKeyDown = (e) => {
-    if (e.key === 'Enter' && !e.shiftKey) {
-      e.preventDefault();
-      handleSend();
-    }
-  };
-
-  return (
-    <div className="flex flex-col h-screen bg-gray-900 text-gray-100 font-sans" dir="rtl">
-      
-      {/* Header */}
-      <header className="flex items-center justify-between px-6 py-4 bg-gray-800 border-b border-gray-700">
-        <div className="flex items-center gap-3">
-          <div className="p-2 bg-indigo-600 rounded-lg">
-            <Bot className="w-6 h-6 text-white" />
-          </div>
-          <div>
-            <h1 className="text-xl font-bold text-white">دردشة الويب</h1>
-            <p className="text-xs text-gray-400 flex items-center gap-1">
-              {config.mode === 'custom_php' ? 'وضع ملف PHP' : 'وضع OpenAI المباشر'}
-            </p>
-          </div>
+    <!-- الرأس (Header) -->
+    <header class="flex items-center justify-between px-6 py-4 bg-slate-800 border-b border-slate-700 shadow-md shrink-0">
+        <div class="flex items-center gap-3">
+            <div class="p-2 bg-indigo-600 rounded-lg shadow-lg shadow-indigo-500/20">
+                <i data-lucide="bot" class="w-6 h-6 text-white"></i>
+            </div>
+            <div>
+                <h1 class="text-xl font-bold text-white tracking-wide">الدردشة الذكية</h1>
+                <p class="text-xs text-slate-400 flex items-center gap-1">
+                    <span class="w-2 h-2 rounded-full bg-green-500 animate-pulse"></span>
+                    متصل بـ <span id="currentEndpointDisplay" class="font-mono text-indigo-300">chat.php</span>
+                </p>
+            </div>
         </div>
         
-        <div className="flex gap-2">
-          <button onClick={() => setMessages([])} className="p-2 text-gray-400 hover:text-red-400 hover:bg-gray-700 rounded-lg">
-            <Trash2 className="w-5 h-5" />
-          </button>
-          <button onClick={() => setIsSettingsOpen(true)} className="p-2 text-gray-400 hover:text-blue-400 hover:bg-gray-700 rounded-lg">
-            <Settings className="w-6 h-6" />
-          </button>
-        </div>
-      </header>
-
-      {/* Chat Area */}
-      <main className="flex-1 overflow-y-auto p-4 md:p-6 space-y-6">
-        {messages.map((msg) => (
-          <div key={msg.id} className={`flex items-start gap-4 max-w-4xl mx-auto ${msg.role === 'user' ? 'flex-row-reverse' : 'flex-row'}`}>
-            <div className={`w-10 h-10 rounded-full flex items-center justify-center shrink-0 ${
-              msg.role === 'user' ? 'bg-indigo-600' : msg.role === 'system' ? 'bg-red-900/50' : 'bg-gray-700'
-            }`}>
-              {msg.role === 'user' ? <User className="w-6 h-6" /> : <Bot className="w-6 h-6" />}
-            </div>
-
-            <div className={`flex flex-col gap-1 max-w-[80%]`}>
-               {/* عرض المرفقات إن وجدت */}
-               {msg.attachments && msg.attachments.length > 0 && (
-                <div className={`flex flex-wrap gap-2 mb-1 ${msg.role === 'user' ? 'justify-end' : 'justify-start'}`}>
-                  {msg.attachments.map((att, idx) => (
-                    <div key={idx} className="bg-gray-800 p-2 rounded border border-gray-600 text-xs flex items-center gap-1">
-                      <FileText className="w-3 h-3" /> {att.name}
-                    </div>
-                  ))}
-                </div>
-              )}
-
-              <div className={`px-5 py-3 rounded-2xl leading-relaxed shadow-sm ${
-                msg.role === 'user' ? 'bg-indigo-600 text-white rounded-tl-none' : 
-                msg.role === 'system' ? 'bg-red-900/20 text-red-200 border border-red-800 text-sm' : 
-                'bg-gray-800 text-gray-200 border border-gray-700 rounded-tr-none'
-              }`}>
-                <p className="whitespace-pre-wrap">{msg.content}</p>
-              </div>
-            </div>
-          </div>
-        ))}
-        {isLoading && (
-          <div className="flex justify-center py-4">
-            <Loader2 className="w-6 h-6 animate-spin text-indigo-500" />
-          </div>
-        )}
-        <div ref={messagesEndRef} />
-      </main>
-
-      {/* Input Area */}
-      <footer className="p-4 bg-gray-800 border-t border-gray-700">
-        <div className="max-w-4xl mx-auto flex gap-2 items-end bg-gray-900 p-2 rounded-xl border border-gray-700">
-            <input type="file" ref={fileInputRef} onChange={handleFileSelect} className="hidden" multiple />
-            <button onClick={() => fileInputRef.current?.click()} className="p-3 text-gray-400 hover:text-white rounded-lg">
-              <Paperclip className="w-5 h-5" />
+        <div class="flex gap-2">
+            <button onclick="clearChat()" class="p-2 text-slate-400 hover:text-red-400 hover:bg-slate-700 rounded-lg transition-colors" title="مسح المحادثة">
+                <i data-lucide="trash-2" class="w-5 h-5"></i>
             </button>
-            <textarea
-              value={input}
-              onChange={(e) => setInput(e.target.value)}
-              onKeyDown={handleKeyDown}
-              placeholder="اكتب رسالتك..."
-              className="flex-1 bg-transparent text-white px-2 py-3 focus:outline-none resize-none h-12"
-            />
-            <button onClick={handleSend} disabled={isLoading || !input.trim()} className="p-3 bg-indigo-600 hover:bg-indigo-700 rounded-lg text-white">
-              <Send className="w-5 h-5" />
+            <button onclick="toggleSettings()" class="p-2 text-slate-400 hover:text-blue-400 hover:bg-slate-700 rounded-lg transition-colors" title="الإعدادات">
+                <i data-lucide="settings" class="w-6 h-6"></i>
             </button>
         </div>
-      </footer>
+    </header>
 
-      {/* Settings Modal */}
-      {isSettingsOpen && (
-        <div className="fixed inset-0 bg-black/60 flex items-center justify-center z-50 p-4">
-          <div className="bg-gray-800 w-full max-w-md rounded-2xl border border-gray-700 p-6 space-y-4">
-            <div className="flex justify-between items-center mb-4">
-              <h2 className="text-lg font-bold flex items-center gap-2"><Settings className="w-5 h-5" /> الإعدادات</h2>
-              <button onClick={() => setIsSettingsOpen(false)}><X className="w-5 h-5" /></button>
+    <!-- منطقة المحادثة (Chat Area) -->
+    <main id="chatBox" class="flex-1 overflow-y-auto p-4 space-y-6 scroll-smooth">
+        <!-- رسالة ترحيب -->
+        <div class="flex items-start gap-4 flex-row message-animation">
+            <div class="w-10 h-10 rounded-full bg-slate-700 flex items-center justify-center shrink-0 border border-slate-600">
+                <i data-lucide="bot" class="w-6 h-6 text-slate-300"></i>
+            </div>
+            <div class="bg-slate-800 text-slate-200 border border-slate-700 px-5 py-3 rounded-2xl rounded-tr-none shadow-sm max-w-[85%]">
+                <p>مرحباً بك! أنا جاهز للتواصل مع ملف <code>chat.php</code>. اكتب رسالتك بالأسفل.</p>
+            </div>
+        </div>
+    </main>
+
+    <!-- مؤشر التحميل (مخفي افتراضياً) -->
+    <div id="loadingIndicator" class="hidden px-4 py-2">
+        <div class="flex items-center gap-2 max-w-4xl mx-auto">
+            <div class="w-10 h-10 rounded-full bg-slate-800 flex items-center justify-center">
+                <i data-lucide="loader-2" class="w-5 h-5 animate-spin text-indigo-500"></i>
+            </div>
+            <span class="text-slate-500 text-sm">جاري المعالجة...</span>
+        </div>
+    </div>
+
+    <!-- منطقة الإدخال (Input Area) -->
+    <footer class="p-4 bg-slate-800 border-t border-slate-700 shrink-0">
+        <div class="max-w-4xl mx-auto space-y-3">
+            
+            <!-- منطقة معاينة المرفقات -->
+            <div id="attachmentsPreview" class="flex gap-2 overflow-x-auto pb-1 hidden">
+                <!-- سيتم إضافة الصور هنا بواسطة JS -->
+            </div>
+
+            <div class="relative flex items-end gap-2 bg-slate-900/50 p-2 rounded-2xl border border-slate-700 focus-within:border-indigo-500/50 transition-all shadow-inner">
+                
+                <!-- زر المرفقات -->
+                <input type="file" id="fileInput" class="hidden" multiple onchange="handleFileSelect(event)">
+                <button onclick="document.getElementById('fileInput').click()" class="p-3 text-slate-400 hover:text-white hover:bg-slate-700 rounded-xl transition-colors shrink-0">
+                    <i data-lucide="paperclip" class="w-5 h-5"></i>
+                </button>
+
+                <!-- مربع النص -->
+                <textarea
+                    id="userMessage"
+                    placeholder="اكتب رسالتك هنا..."
+                    class="w-full bg-transparent text-white placeholder-slate-500 px-2 py-3 focus:outline-none resize-none max-h-32 min-h-[44px]"
+                    rows="1"
+                    onkeydown="if(event.key === 'Enter' && !event.shiftKey){ event.preventDefault(); sendMessage(); }"
+                ></textarea>
+
+                <!-- زر الإرسال -->
+                <button
+                    onclick="sendMessage()"
+                    class="p-3 bg-indigo-600 hover:bg-indigo-500 rounded-xl transition-all text-white shadow-lg shrink-0"
+                >
+                    <i data-lucide="send" class="w-5 h-5"></i>
+                </button>
+            </div>
+        </div>
+    </footer>
+
+    <!-- نافذة الإعدادات (Modal) -->
+    <div id="settingsModal" class="fixed inset-0 bg-black/70 backdrop-blur-sm hidden items-center justify-center z-50 p-4">
+        <div class="bg-slate-800 w-full max-w-md rounded-2xl border border-slate-700 shadow-2xl p-6 transform transition-all scale-100">
+            <div class="flex justify-between items-center mb-6 border-b border-slate-700 pb-4">
+                <h2 class="text-lg font-bold flex items-center gap-2 text-white">
+                    <i data-lucide="settings" class="w-5 h-5 text-indigo-400"></i>
+                    إعدادات الاتصال
+                </h2>
+                <button onclick="toggleSettings()" class="text-slate-400 hover:text-white">
+                    <i data-lucide="x" class="w-6 h-6"></i>
+                </button>
             </div>
             
-            {/* خيار التبديل بين الأوضاع */}
-            <div className="bg-gray-900 p-3 rounded-lg border border-gray-600">
-              <label className="text-sm text-gray-400 mb-2 block">نوع الاتصال</label>
-              <div className="flex gap-2">
-                <button 
-                  onClick={() => setConfig({...config, mode: 'openai', endpoint: 'https://api.openai.com/v1/chat/completions'})}
-                  className={`flex-1 py-2 px-3 rounded text-sm ${config.mode === 'openai' ? 'bg-indigo-600 text-white' : 'bg-gray-700 text-gray-300'}`}
-                >
-                  OpenAI المباشر
-                </button>
-                <button 
-                  onClick={() => setConfig({...config, mode: 'custom_php', endpoint: 'chat.php'})}
-                  className={`flex-1 py-2 px-3 rounded text-sm ${config.mode === 'custom_php' ? 'bg-indigo-600 text-white' : 'bg-gray-700 text-gray-300'}`}
-                >
-                  ملف PHP مخصص
-                </button>
-              </div>
+            <div class="space-y-4">
+                <div>
+                    <label class="block text-sm font-medium text-slate-300 mb-2">رابط ملف PHP (Endpoint)</label>
+                    <input 
+                        type="text" 
+                        id="apiEndpoint" 
+                        value="chat.php"
+                        class="w-full bg-slate-900 border border-slate-600 rounded-xl px-4 py-3 text-sm focus:border-indigo-500 focus:outline-none text-slate-200 dir-ltr font-mono shadow-inner"
+                        dir="ltr"
+                    />
+                    <p class="text-xs text-slate-500 mt-2">
+                        اكتب الرابط كاملاً، مثال: <code class="bg-slate-900 px-1 rounded text-indigo-300">http://localhost/chat.php</code>
+                    </p>
+                </div>
             </div>
 
-            {config.mode === 'openai' ? (
-              <>
-                 <div>
-                  <label className="block text-sm text-gray-400 mb-1">API Key</label>
-                  <input 
-                    type="password" 
-                    value={config.apiKey}
-                    onChange={(e) => setConfig({...config, apiKey: e.target.value})}
-                    className="w-full bg-gray-900 border border-gray-600 rounded p-2 text-sm text-white" 
-                    placeholder="sk-..." 
-                  />
-                </div>
-                <div>
-                  <label className="block text-sm text-gray-400 mb-1">Model</label>
-                  <input 
-                    type="text" 
-                    value={config.model}
-                    onChange={(e) => setConfig({...config, model: e.target.value})}
-                    className="w-full bg-gray-900 border border-gray-600 rounded p-2 text-sm text-white" 
-                    placeholder="gpt-3.5-turbo" 
-                  />
-                </div>
-              </>
-            ) : (
-              // إعدادات وضع PHP
-              <div>
-                 <div className="p-3 bg-yellow-900/30 border border-yellow-700/50 rounded text-xs text-yellow-200 mb-3">
-                   في هذا الوضع، سيتم إرسال البيانات بالتنسيق التالي إلى ملف chat.php:
-                   <br/>
-                   <code className="block mt-1 bg-black/30 p-1" dir="ltr">{`{ "message": "${input || 'محتوى الرسالة'}" }`}</code>
-                 </div>
-                 <label className="block text-sm text-gray-400 mb-1">مسار الملف (Endpoint)</label>
-                 <input 
-                    type="text" 
-                    value={config.endpoint}
-                    onChange={(e) => setConfig({...config, endpoint: e.target.value})}
-                    className="w-full bg-gray-900 border border-gray-600 rounded p-2 text-sm text-white dir-ltr" 
-                    dir="ltr"
-                  />
-              </div>
-            )}
-
-            <button onClick={() => setIsSettingsOpen(false)} className="w-full bg-indigo-600 hover:bg-indigo-700 text-white py-2 rounded-lg mt-4">
-              حفظ
-            </button>
-          </div>
+            <div class="mt-8 flex justify-end">
+                <button onclick="saveSettings()" class="bg-indigo-600 hover:bg-indigo-500 text-white px-6 py-2.5 rounded-xl font-medium transition-colors shadow-lg shadow-indigo-900/20 flex items-center gap-2">
+                    <i data-lucide="save" class="w-4 h-4"></i>
+                    حفظ وإغلاق
+                </button>
+            </div>
         </div>
-      )}
     </div>
-  );
-}
+
+    <!-- JavaScript Logic -->
+    <script>
+        // تفعيل الأيقونات
+        lucide.createIcons();
+
+        // متغيرات عامة
+        let endpointURL = "chat.php";
+        const chatBox = document.getElementById("chatBox");
+        const userMessageInput = document.getElementById("userMessage");
+        const loadingIndicator = document.getElementById("loadingIndicator");
+
+        // --- الدالة الأساسية للإرسال (كما طلبت مع تحسينات) ---
+        async function sendMessage() {
+            const text = userMessageInput.value.trim();
+            
+            // التحقق من وجود نص
+            if (!text) return;
+
+            // 1. عرض رسالة المستخدم في الواجهة
+            appendMessage('user', text);
+            userMessageInput.value = ""; // مسح الحقل
+            loadingIndicator.classList.remove('hidden'); // إظهار التحميل
+            
+            // التمرير للأسفل
+            chatBox.scrollTop = chatBox.scrollHeight;
+
+            try {
+                // 2. إرسال البيانات (fetch)
+                const response = await fetch(endpointURL, {
+                    method: "POST",
+                    headers: { 
+                        "Content-Type": "application/json",
+                        "Accept": "application/json" 
+                    },
+                    body: JSON.stringify({ message: text })
+                });
+
+                // التحقق من أن السيرفر أرسل JSON ولم يرسل خطأ HTML
+                const contentType = response.headers.get("content-type");
+                if (!contentType || !contentType.includes("application/json")) {
+                     const textResponse = await response.text();
+                     throw new Error("السيرفر أرجع استجابة غير صالحة (HTML). تأكد من مسار الملف في الإعدادات.\n" + textResponse.substring(0, 100));
+                }
+
+                // 3. استقبال الرد
+                const data = await response.json();
+                
+                // استخراج المحتوى (يدعم هيكلية OpenAI أو هيكلية بسيطة)
+                let reply = "لا يوجد رد.";
+                if (data.choices && data.choices[0] && data.choices[0].message) {
+                    reply = data.choices[0].message.content;
+                } else if (data.message) {
+                    reply = data.message;
+                } else if (data.error) {
+                    reply = "خطأ من السيرفر: " + data.error;
+                } else {
+                    reply = JSON.stringify(data);
+                }
+
+                // 4. عرض الرد
+                appendMessage('bot', reply);
+
+            } catch (error) {
+                console.error("Error:", error);
+                appendMessage('error', "حدث خطأ في الاتصال: " + error.message);
+            } finally {
+                loadingIndicator.classList.add('hidden'); // إخفاء التحميل
+                chatBox.scrollTop = chatBox.scrollHeight;
+            }
+        }
+
+        // --- دوال مساعدة للعرض ---
+
+        // دالة لإضافة "فقاعة" رسالة للدردشة
+        function appendMessage(sender, text) {
+            const div = document.createElement("div");
+            div.className = `flex items-start gap-4 message-animation ${sender === 'user' ? 'flex-row-reverse' : 'flex-row'}`;
+            
+            // تحديد الألوان والأيقونات حسب المرسل
+            let avatarBg = sender === 'user' ? 'bg-indigo-600' : sender === 'error' ? 'bg-red-600' : 'bg-slate-700';
+            let iconName = sender === 'user' ? 'user' : sender === 'error' ? 'alert-triangle' : 'bot';
+            let bubbleClass = sender === 'user' 
+                ? 'bg-indigo-600 text-white rounded-tl-none' 
+                : sender === 'error'
+                ? 'bg-red-900/50 text-red-200 border border-red-700 rounded-tr-none font-mono text-sm'
+                : 'bg-slate-800 text-slate-200 border border-slate-700 rounded-tr-none';
+
+            div.innerHTML = `
+                <div class="w-10 h-10 rounded-full ${avatarBg} flex items-center justify-center shrink-0 border border-white/10 shadow-md">
+                    <i data-lucide="${iconName}" class="w-5 h-5 text-white"></i>
+                </div>
+                <div class="${bubbleClass} px-5 py-3 rounded-2xl shadow-sm max-w-[85%] leading-relaxed">
+                    <p class="whitespace-pre-wrap break-words">${text}</p>
+                </div>
+            `;
+            
+            chatBox.appendChild(div);
+            lucide.createIcons(); // تحديث الأيقونات للعناصر الجديدة
+        }
+
+        // إعدادات المودال
+        function toggleSettings() {
+            const modal = document.getElementById('settingsModal');
+            if (modal.classList.contains('hidden')) {
+                modal.classList.remove('hidden');
+                modal.classList.add('flex');
+                document.getElementById('apiEndpoint').value = endpointURL; // جلب القيمة الحالية
+            } else {
+                modal.classList.add('hidden');
+                modal.classList.remove('flex');
+            }
+        }
+
+        function saveSettings() {
+            const newUrl = document.getElementById('apiEndpoint').value.trim();
+            if (newUrl) {
+                endpointURL = newUrl;
+                document.getElementById('currentEndpointDisplay').innerText = newUrl.split('/').pop(); // عرض اسم الملف فقط
+            }
+            toggleSettings();
+        }
+
+        function clearChat() {
+            chatBox.innerHTML = ''; // مسح المحتوى
+            appendMessage('system', 'تم مسح المحادثة. ابدأ من جديد!');
+        }
+
+        // التعامل مع الملفات (معاينة فقط في هذا الإصدار)
+        function handleFileSelect(event) {
+            const files = event.target.files;
+            const previewContainer = document.getElementById('attachmentsPreview');
+            
+            if (files.length > 0) {
+                previewContainer.classList.remove('hidden');
+            }
+
+            for (let i = 0; i < files.length; i++) {
+                const file = files[i];
+                const div = document.createElement('div');
+                div.className = 'bg-slate-800 border border-slate-600 rounded-lg p-2 min-w-[100px] flex flex-col items-center justify-center relative group';
+                div.innerHTML = `
+                    <i data-lucide="file-text" class="w-6 h-6 text-slate-400 mb-1"></i>
+                    <span class="text-[10px] text-slate-300 truncate w-full text-center max-w-[80px]">${file.name}</span>
+                `;
+                previewContainer.appendChild(div);
+            }
+            lucide.createIcons();
+        }
+
+    </script>
+</body>
+</html>
 
